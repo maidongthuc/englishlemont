@@ -381,18 +381,50 @@
 
   /* ---------- Đọc ---------- */
   const synth = window.speechSynthesis;
-  function speak(text, rate = 0.9) {
-    if (!synth || !text) return;
+  // Luôn chọn cùng một giọng theo thứ tự ưu tiên, để local và bản deploy đọc giống nhau
+  const PREFERRED_VOICES = [
+    "Google UK English Female", "Google UK English Male",            // Chrome
+    "Microsoft Sonia", "Microsoft Libby", "Microsoft Ryan",           // Edge / Windows
+    "Daniel", "Kate", "Serena", "Arthur", "Martha",                   // Safari / iPhone / Mac
+  ];
+  let voices = [];
+  function loadVoices() { voices = synth ? synth.getVoices() : []; }
+  // Trình duyệt nạp danh sách giọng chậm; chờ tối đa 1.5 giây
+  const voicesReady = new Promise(resolve => {
+    if (!synth) return resolve();
+    loadVoices();
+    if (voices.length) return resolve();
+    synth.addEventListener?.("voiceschanged", () => { loadVoices(); resolve(); }, { once: true });
+    setTimeout(() => { loadVoices(); resolve(); }, 1500);
+  });
+  if (synth) synth.addEventListener?.("voiceschanged", loadVoices);
+
+  function pickVoice() {
+    const isGB = (v) => /^en[-_]GB$/i.test(v.lang);
+    for (const name of PREFERRED_VOICES) {
+      const v = voices.find(v => v.name.startsWith(name) && /^en/i.test(v.lang));
+      if (v) return v;
+    }
+    const byName = (a, b) => a.name.localeCompare(b.name);
+    const gb = voices.filter(isGB).sort(byName);
+    const en = voices.filter(v => /^en/i.test(v.lang)).sort(byName);
+    return gb.find(v => !v.localService) || gb[0] || en[0] || null;
+  }
+
+  function speakNow(text, rate) {
     synth.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    const vs = synth.getVoices();
-    const v = vs.find(v => v.lang === "en-GB") || vs.find(v => /^en/i.test(v.lang));
+    const v = pickVoice();
     if (v) u.voice = v;
     u.lang = v ? v.lang : "en-GB";
     u.rate = rate;
     synth.speak(u);
   }
-  if (synth) synth.getVoices();
+  function speak(text, rate = 0.9) {
+    if (!synth || !text) return;
+    if (voices.length) speakNow(text, rate);
+    else voicesReady.then(() => speakNow(text, rate));
+  }
 
   /* ---------- Popup (thay cho confirm/alert của trình duyệt) ---------- */
   // Trả về true nếu bấm nút OK, false nếu Cancel / Esc / bấm ra ngoài
