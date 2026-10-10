@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>My English Notebooks</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --page: #f6f9fd; --paper: #ffffff; --ink: #1b2a4a; --muted: #5b6b88;
+    --rule: #d3deec; --margin: #e8a0a0; --highlight: #ffd84d; --danger: #b3261e;
+    color-scheme: light;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); background: var(--page); }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font-family: "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 17px; line-height: 1.5;
+  }
+  main { max-width: 1200px; margin: 0 auto; padding: 40px clamp(16px, 4vw, 48px) 64px; }
+  h1 { font-family: "Fraunces", Georgia, serif; font-size: clamp(2rem, 7vw, 3rem); line-height: 1.05; margin: 0 0 8px; overflow-wrap: anywhere; }
+  .hl { background: linear-gradient(transparent 55%, var(--highlight) 55%); padding: 0 4px; }
+  .intro { color: var(--muted); margin: 0 0 24px; }
+
+  .sheet {
+    background: var(--paper); border-radius: 6px; position: relative; overflow: hidden;
+    box-shadow: 0 1px 0 var(--rule), 0 12px 30px -18px rgba(27,42,74,.3);
+    padding: 18px 20px 18px 72px;
+  }
+  .sheet::before {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 52px;
+    border-left: 2px solid var(--margin); pointer-events: none;
+  }
+  label { display: block; font-size: .9rem; color: var(--muted); margin-bottom: 2px; }
+  input[type="text"] {
+    width: 100%; font: inherit; font-size: 1.05rem; color: var(--ink); background: transparent;
+    border: 0; border-bottom: 1.5px solid var(--rule); padding: 6px 2px; border-radius: 0; outline: none;
+    margin-bottom: 14px;
+  }
+  input[type="text"]:focus { border-bottom-color: var(--ink); }
+
+  .btn {
+    font: inherit; font-weight: 700; color: var(--ink); background: var(--highlight);
+    border: 2px solid var(--ink); border-radius: 999px; padding: 10px 24px; cursor: pointer;
+    box-shadow: 3px 3px 0 var(--ink); transition: transform .08s, box-shadow .08s;
+  }
+  .btn:active { transform: translate(3px,3px); box-shadow: 0 0 0 var(--ink); }
+  .btn.ghost { background: var(--paper); }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .icon-btn {
+    font: inherit; font-size: .9rem; color: var(--ink); background: var(--paper);
+    border: 1.5px solid var(--rule); border-radius: 999px; padding: 4px 14px; cursor: pointer;
+  }
+  .icon-btn:hover { border-color: var(--ink); }
+  .icon-btn.danger { color: var(--danger); }
+  .back {
+    font: inherit; font-weight: 700; color: var(--ink); background: none; border: 0;
+    padding: 4px 0; margin-bottom: 14px; cursor: pointer;
+  }
+  .back:hover { text-decoration: underline; }
+  :focus-visible { outline: 3px solid #4a7bd1; outline-offset: 2px; }
+  .msg { min-height: 1.4em; margin: 8px 0 0; color: var(--muted); }
+  .msg.error { color: var(--danger); }
+  [hidden] { display: none !important; }
+
+  /* ---------- Import CSV ---------- */
+  .import { margin-top: 18px; }
+  .import-help { margin: 0 0 12px; font-size: .95rem; color: var(--muted); }
+  .file-btn { display: inline-block; margin: 0; font-size: 1rem; color: var(--ink); }
+  .file-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .file-btn:focus-within { outline: 3px solid #4a7bd1; outline-offset: 2px; }
+  a.icon-btn { text-decoration: none; }
+
+  /* ---------- Popup ---------- */
+  .modal {
+    width: min(420px, calc(100% - 32px)); padding: 22px 22px 18px; border: 2px solid var(--ink); border-radius: 10px;
+    background: var(--paper); color: var(--ink); box-shadow: 6px 6px 0 var(--ink);
+  }
+  .modal::backdrop { background: rgba(27,42,74,.45); }
+  .modal-title { font-family: "Fraunces", Georgia, serif; font-size: 1.35rem; margin: 0 0 8px; }
+  .modal-text { margin: 0 0 18px; overflow-wrap: anywhere; }
+  .modal-text .quote { display: block; margin-top: 8px; padding-left: 10px; border-left: 4px solid var(--highlight); font-weight: 700; }
+  .modal-text .warn { display: block; margin-top: 10px; color: var(--danger); }
+  .modal-actions { justify-content: flex-end; }
+  .btn.danger-btn { background: var(--danger); color: #fff; }
+
+  /* ---------- Bookshelf ---------- */
+  .new-book { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; }
+  .new-book > div { flex: 1 1 240px; }
+  .new-book input[type="text"] { margin-bottom: 0; }
+  .shelf {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 22px; margin-top: 30px;
+  }
+  .book {
+    position: relative; aspect-ratio: 3 / 4; border: 2px solid var(--ink); border-radius: 4px 10px 10px 4px;
+    box-shadow: 5px 5px 0 var(--ink); cursor: pointer; text-align: left; font: inherit; color: var(--ink);
+    padding: 0; display: flex; flex-direction: column; justify-content: center; align-items: center;
+    transition: transform .12s, box-shadow .12s;
+  }
+  .book:hover { transform: translate(-2px,-2px); box-shadow: 7px 7px 0 var(--ink); }
+  .book::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 16px;
+    background: rgba(27,42,74,.18); border-right: 2px solid var(--ink);
+  }
+  .label {
+    width: 78%; margin-left: 12px; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 6px;
+    padding: 10px 10px 8px; text-align: center;
+    background-image: repeating-linear-gradient(transparent 0 23px, var(--rule) 23px 24px);
+  }
+  .label-title { font-family: "Fraunces", Georgia, serif; font-size: 1.15rem; line-height: 1.2; overflow-wrap: anywhere; }
+  .label-count { font-size: .85rem; color: var(--muted); margin-top: 4px; }
+  .empty { text-align: center; color: var(--muted); padding: 28px 0; margin: 0; }
+
+  /* ---------- Inside a notebook ---------- */
+  .book-head { display: flex; justify-content: space-between; align-items: start; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+  .rename-form { margin: 0 0 12px; }
+  .rename-form input[type="text"] {
+    font-family: "Fraunces", Georgia, serif; font-size: clamp(1.6rem, 6vw, 2.4rem); font-weight: 600;
+    background: var(--paper); border: 0; border-bottom: 2px solid var(--ink); padding: 2px 6px; margin-bottom: 8px;
+  }
+  .rename-form .msg { margin: 4px 0 0; }
+  .book-head h1 { margin: 0 0 22px; }
+  .toolbar { display: flex; gap: 12px; align-items: end; margin: 28px 0 10px; flex-wrap: wrap; }
+  .toolbar .search { flex: 1 1 220px; }
+  .toolbar input[type="text"] {
+    background: var(--paper); border: 1.5px solid var(--rule); border-radius: 6px; padding: 8px 10px; margin: 0;
+  }
+  .count { color: var(--muted); font-size: .95rem; }
+  .items { list-style: none; margin: 0; padding: 0; }
+  .item {
+    border-bottom: 1px solid var(--rule);
+    padding: 8px 0 10px;
+  }
+  .item > button.sentence {
+    display: flex; width: 100%; justify-content: space-between; gap: 12px; align-items: baseline;
+    font: inherit; font-size: 1.05rem; color: var(--ink); text-align: left; font-weight: 700;
+    background: transparent; border: 0; padding: 10px 2px; cursor: pointer;
+  }
+  .item > button.sentence::after { content: "+"; color: var(--muted); font-weight: 700; }
+  .item.open > button.sentence::after { content: "–"; }
+  .detail { padding: 0 2px 14px; }
+  .meaning { font-size: 1.05rem; margin: 0 0 10px; padding-left: 10px; border-left: 4px solid var(--highlight); }
+
+  /* ---------- Learn mode ---------- */
+  .learn-top { display: flex; justify-content: space-between; margin-bottom: 12px; }
+  .prompt-label { font-size: .9rem; color: var(--muted); margin: 0; }
+  .prompt { font-size: 1.3rem; font-weight: 700; margin: 2px 0 18px; overflow-wrap: anywhere; }
+  .feedback { margin-top: 16px; padding: 10px 12px; border-radius: 6px; border-left: 4px solid; }
+  .feedback.ok { background: #e6f5ec; border-color: #2e7d4f; }
+  .feedback.bad { background: #fdecea; border-color: var(--danger); }
+  .feedback .answer { font-weight: 700; }
+  .feedback .hint { font-size: .9rem; color: var(--muted); margin-top: 4px; }
+  .audio-row { margin: 6px 0 20px; }
+  .hint-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .mask {
+    display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 4px 0 18px;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 1.2rem; letter-spacing: .12em;
+  }
+  .mask .w { white-space: nowrap; }
+  .mask .hit { color: #2e7d4f; font-weight: 700; }
+  .mask .sp { color: var(--ink); font-weight: 700; }
+  .learn-btn { display: inline-flex; align-items: center; gap: 8px; padding: 6px 18px; }
+  .tag {
+    display: inline-block; margin-left: 6px; padding: 0 8px; border-radius: 999px;
+    background: #fdecea; color: var(--danger); font-size: .8rem; font-weight: 700;
+  }
+  .feedback .row { margin-top: 8px; }
+
+  @media (max-width: 560px) {
+    .sheet { padding-left: 56px; }
+    .sheet::before { left: 40px; }
+    .shelf { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .btn, .book { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- ===== BOOKSHELF ===== -->
+  <section id="view-shelf">
+    <h1>My <span class="hl">notebooks</span></h1>
+    <p class="intro">Each notebook holds a set of English sentences. Tap a notebook to open it.</p>
+
+    <form class="sheet new-book" id="book-form" autocomplete="off">
+      <div>
+        <label for="b-name">New notebook name</label>
+        <input type="text" id="b-name" placeholder="e.g. Everyday conversation" maxlength="60" required>
+      </div>
+      <button type="submit" class="btn">Create notebook</button>
+    </form>
+    <p class="msg" id="book-msg" role="status"></p>
+
+    <div class="shelf" id="shelf"></div>
+  </section>
+
+  <!-- ===== INSIDE A NOTEBOOK ===== -->
+  <section id="view-book" hidden>
+    <button class="back" id="back">‹ My notebooks</button>
+    <div class="book-head">
+      <div>
+        <h1 id="book-title"></h1>
+        <form class="rename-form" id="rename-form" autocomplete="off" hidden>
+          <input type="text" id="rename-input" maxlength="60" aria-label="Notebook name" required>
+          <div class="row">
+            <button type="submit" class="icon-btn">Save</button>
+            <button type="button" class="icon-btn" id="rename-cancel">Cancel</button>
+          </div>
+          <p class="msg error" id="rename-msg" role="status"></p>
+        </form>
+        <div class="row">
+          <button class="btn learn-btn" id="learn-book"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h7a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H2z"/><path d="M22 4h-7a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h8z"/></svg>Learn</button>
+          <button class="btn learn-btn" id="listen-book"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3z"/><path d="M3 19a2 2 0 0 0 2 2h1v-6H3z"/></svg>Listen &amp; type</button>
+        </div>
+      </div>
+      <div class="row">
+        <button class="icon-btn" id="rename-book">Rename</button>
+        <button class="icon-btn danger" id="delete-book">Delete notebook</button>
+      </div>
+    </div>
+    <p class="intro">Tap a sentence to see its meaning and hear it read aloud.</p>
+
+    <form class="sheet" id="form" autocomplete="off">
+      <label for="f-sentence">English sentence</label>
+      <input type="text" id="f-sentence" placeholder="I have to complete my English assignment tonight." required>
+      <label for="f-meaning">Meaning</label>
+      <input type="text" id="f-meaning" placeholder="Tối nay tôi phải làm xong bài tập tiếng Anh." required>
+      <div class="row">
+        <button type="submit" class="btn" id="save-btn">Save sentence</button>
+        <button type="button" class="btn ghost" id="cancel-btn" hidden>Cancel edit</button>
+      </div>
+      <p class="msg" id="form-msg" role="status"></p>
+    </form>
+
+    <div class="sheet import">
+      <label>Add many sentences from a CSV file</label>
+      <p class="import-help">Two columns: <b>sentence</b>, <b>meaning</b>. Sentences already in this notebook are skipped.</p>
+      <div class="row">
+        <label class="btn ghost file-btn">
+          <input type="file" id="csv-file" accept=".csv,text/csv">
+          Upload CSV
+        </label>
+        <a class="icon-btn" href="/static/sample.csv" download="sample.csv">Download sample CSV</a>
+      </div>
+      <p class="msg" id="csv-msg" role="status"></p>
+    </div>
+
+    <div class="toolbar">
+      <div class="search">
+        <label for="search">Search</label>
+        <input type="text" id="search" placeholder="Type a sentence or meaning">
+      </div>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="sheet"><div id="list"></div></div>
+  </section>
+
+  <!-- ===== LEARN MODE ===== -->
+  <section id="view-learn" hidden>
+    <button class="back" id="learn-back">‹ Back to notebook</button>
+    <h1 id="learn-title"></h1>
+    <p class="intro" id="learn-intro"></p>
+
+    <div class="sheet" id="learn-card">
+      <div class="learn-top">
+        <span class="count" id="learn-progress"></span>
+        <span class="count" id="learn-score"></span>
+      </div>
+      <p class="prompt-label"><span id="learn-label">Meaning</span> <span class="tag" id="learn-again-tag" hidden>Try again</span></p>
+      <p class="prompt" id="learn-prompt"></p>
+      <div class="row audio-row" id="learn-audio" hidden>
+        <button type="button" class="btn" id="learn-play">▶ Play</button>
+        <button type="button" class="btn ghost" id="learn-play-slow">Play slowly</button>
+      </div>
+      <p class="prompt-label hint-head">
+        <span><span id="learn-hint-text">Hint · </span><span id="learn-mask-count"></span></span>
+        <button type="button" class="icon-btn" id="learn-hint-toggle" aria-controls="learn-mask"></button>
+      </p>
+      <div class="mask" id="learn-mask" aria-live="polite"></div>
+      <form id="learn-form" autocomplete="off">
+        <label for="learn-input">Your answer (English)</label>
+        <input type="text" id="learn-input" autocapitalize="off" spellcheck="false">
+        <div class="row">
+          <button type="submit" class="btn" id="learn-check">Check</button>
+          <button type="button" class="btn ghost" id="learn-skip">Show answer</button>
+          <button type="button" class="btn" id="learn-next" hidden>Next ›</button>
+        </div>
+      </form>
+      <div class="feedback" id="learn-feedback" role="status" hidden></div>
+    </div>
+
+    <div class="sheet" id="learn-done" hidden>
+      <p class="prompt" id="learn-result"></p>
+      <div class="row">
+        <button type="button" class="btn" id="learn-again">Learn again</button>
+        <button type="button" class="btn ghost" id="learn-retry" hidden>Practice mistakes</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ===== Hộp thoại xác nhận ===== -->
+<dialog class="modal" id="modal" aria-labelledby="modal-title">
+  <form method="dialog">
+    <h2 class="modal-title" id="modal-title"></h2>
+    <p class="modal-text" id="modal-text"></p>
+    <div class="row modal-actions">
+      <button type="submit" class="btn ghost" value="cancel" id="modal-cancel">Cancel</button>
+      <button type="submit" class="btn danger-btn" value="ok" id="modal-ok">Delete</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+ (async () => {
+  const COLORS = ["#ffd84d", "#9cc9f5", "#f5b0b0", "#a8dcc1", "#c9b6f2", "#ffb877"];
+
+  let items = [];   // {id, term, meaning, notebookId, createdAt}
+  let books = [];   // {id, kind:"notebook", name, color, createdAt}
+  let currentBook = null, editingId = null, openId = null;
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  /* ---------- Lưu trữ ---------- */
+  function normalizeData(data) {
+    const nextItems = Array.isArray(data?.items) ? data.items : [];
+    const nextBooks = Array.isArray(data?.books) ? data.books : [];
+    items = nextItems;
+    books = nextBooks;
+  }
+
+  // Câu cũ chưa thuộc sổ nào thì gom vào "Sổ đầu tiên"
+  function migrate() {
+    const orphans = items.filter(it => !it.notebookId || !books.some(b => b.id === it.notebookId));
+    if (!orphans.length) return [];
+    let book = books.find(b => b.name === "My first notebook" || b.name === "Sổ đầu tiên");
+    const changed = [];
+    if (!book) {
+      book = { id: uid(), kind: "notebook", name: "My first notebook", color: COLORS[books.length % COLORS.length], createdAt: Date.now() };
+      books.push(book);
+      changed.push(book);
+    }
+    for (const it of orphans) { it.notebookId = book.id; changed.push(it); }
+    return changed;
+  }
+
+  async function loadData() {
+    try {
+      const response = await fetch("/api/data");
+      if (!response.ok) throw new Error("Failed to load data");
+      normalizeData(await response.json());
+    } catch {
+      normalizeData({ items: [], books: [] });
+    }
+  }
+
+  async function saveData() {
+    try {
+      const response = await fetch("/api/data", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items, books }),
+      });
+      if (!response.ok) throw new Error("Failed to save data");
+    } catch {
+      throw new Error("Failed to save data");
+    }
+  }
+
+  async function persist() {
+    await saveData();
+  }
+
+  /* ---------- Đọc ---------- */
+  const synth = window.speechSynthesis;
+  function speak(text, rate = 0.9) {
+    if (!synth || !text) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const vs = synth.getVoices();
+    const v = vs.find(v => v.lang === "en-GB") || vs.find(v => /^en/i.test(v.lang));
+    if (v) u.voice = v;
+    u.lang = v ? v.lang : "en-GB";
+    u.rate = rate;
+    synth.speak(u);
+  }
+  if (synth) synth.getVoices();
+
+  /* ---------- Popup (thay cho confirm/alert của trình duyệt) ---------- */
+  // Trả về true nếu bấm nút OK, false nếu Cancel / Esc / bấm ra ngoài
+  function showModal({ title, html, okText = "OK", alert = false }) {
+    const dlg = $("modal");
+    $("modal-title").textContent = title;
+    $("modal-text").innerHTML = html;
+    $("modal-ok").textContent = okText;
+    $("modal-ok").classList.toggle("danger-btn", !alert);
+    $("modal-cancel").hidden = alert;
+    dlg.returnValue = "";
+    return new Promise(resolve => {
+      dlg.addEventListener("close", () => resolve(dlg.returnValue === "ok"), { once: true });
+      dlg.showModal();
+      (alert ? $("modal-ok") : $("modal-cancel")).focus();
+    });
+  }
+  $("modal").addEventListener("click", (e) => {
+    const r = $("modal").getBoundingClientRect();
+    const outside = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    if (e.target === $("modal") && outside) $("modal").close("cancel");
+  });
+
+  /* ---------- Giá sổ tay ---------- */
+  function renderShelf() {
+    const shelf = $("shelf");
+    if (!books.length) {
+      shelf.innerHTML = `<p class="empty" style="grid-column:1/-1">You don't have any notebooks yet. Enter a name and tap “Create notebook” to start.</p>`;
+      return;
+    }
+    const sorted = [...books].sort((a, b) => a.name.localeCompare(b.name, "vi", { sensitivity: "base" }));
+    shelf.innerHTML = sorted.map(b => {
+      const n = items.filter(it => it.notebookId === b.id).length;
+      return `
+        <button class="book" data-id="${b.id}" style="background:${esc(b.color)}" aria-label="Open notebook ${esc(b.name)}">
+          <span class="label">
+            <span class="label-title">${esc(b.name)}</span>
+            <span class="label-count" style="display:block">${n} ${n === 1 ? "sentence" : "sentences"}</span>
+          </span>
+        </button>`;
+    }).join("");
+  }
+
+  $("book-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = $("b-name").value.trim();
+    const msg = $("book-msg");
+    msg.classList.remove("error");
+    if (!name) return;
+    if (books.some(b => b.name.toLowerCase() === name.toLowerCase())) {
+      msg.textContent = "A notebook with this name already exists."; msg.classList.add("error"); return;
+    }
+    const b = { id: uid(), kind: "notebook", name, color: COLORS[books.length % COLORS.length], createdAt: Date.now() };
+    books.push(b);
+    try {
+      await persist();
+      $("book-form").reset();
+      msg.textContent = `Created “${name}”.`;
+      renderShelf();
+    } catch {
+      books = books.filter(x => x.id !== b.id);
+      msg.textContent = "Could not save the notebook. Try again.";
+      msg.classList.add("error");
+    }
+  });
+
+  $("shelf").addEventListener("click", (e) => {
+    const btn = e.target.closest(".book");
+    if (btn) openBook(btn.dataset.id);
+  });
+
+  /* ---------- Trong sổ tay ---------- */
+  function openBook(id) {
+    currentBook = id; openId = null; editingId = null;
+    $("csv-msg").textContent = "";
+    stopRename();
+    $("form").reset(); $("search").value = "";
+    $("form-msg").textContent = "";
+    $("save-btn").textContent = "Save sentence"; $("cancel-btn").hidden = true;
+    $("view-shelf").hidden = true; $("view-book").hidden = false;
+    renderBook();
+    window.scrollTo(0, 0);
+  }
+  function closeBook() {
+    currentBook = null;
+    $("view-book").hidden = true; $("view-shelf").hidden = false;
+    $("book-msg").textContent = "";
+    renderShelf();
+    window.scrollTo(0, 0);
+  }
+  $("back").addEventListener("click", closeBook);
+
+  // Đổi tên ngay tại vị trí tên sổ
+  function startRename() {
+    const b = books.find(x => x.id === currentBook); if (!b) return;
+    $("rename-input").value = b.name;
+    $("rename-msg").textContent = "";
+    $("book-title").hidden = true; $("rename-form").hidden = false;
+    $("rename-input").focus(); $("rename-input").select();
+  }
+  function stopRename() {
+    $("rename-form").hidden = true; $("book-title").hidden = false;
+    $("rename-msg").textContent = "";
+  }
+  $("rename-book").addEventListener("click", () => {
+    $("rename-form").hidden ? startRename() : stopRename();
+  });
+  $("rename-cancel").addEventListener("click", stopRename);
+  $("rename-input").addEventListener("keydown", (e) => { if (e.key === "Escape") stopRename(); });
+
+  $("rename-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const b = books.find(x => x.id === currentBook); if (!b) return;
+    const name = $("rename-input").value.trim();
+    if (!name) { $("rename-msg").textContent = "Enter a notebook name."; return; }
+    if (name === b.name) { stopRename(); return; }
+    if (books.some(x => x.id !== b.id && x.name.toLowerCase() === name.toLowerCase())) {
+      $("rename-msg").textContent = "A notebook with this name already exists."; return;
+    }
+    const oldName = b.name;
+    b.name = name;
+    try {
+      await persist();
+      stopRename();
+      renderBook();
+    } catch {
+      b.name = oldName;
+      $("rename-msg").textContent = "Could not save the notebook name. Try again.";
+    }
+  });
+
+  $("delete-book").addEventListener("click", async () => {
+    const b = books.find(x => x.id === currentBook); if (!b) return;
+    const inBook = items.filter(it => it.notebookId === b.id);
+    const n = inBook.length;
+    const ok = await showModal({
+      title: "Delete this notebook?",
+      html: `<span class="quote">${esc(b.name)}</span><span class="warn">${n ? `The ${n} ${n === 1 ? "sentence" : "sentences"} inside will also be deleted. ` : ""}This can't be undone.</span>`,
+      okText: "Delete notebook",
+    });
+    if (!ok) return;
+    items = items.filter(it => it.notebookId !== b.id);
+    books = books.filter(x => x.id !== b.id);
+    try {
+      await persist();
+      closeBook();
+    } catch {
+      items = [...items, ...inBook];
+      books = [...books, b];
+      await showModal({ title: "Could not delete", html: "The notebook could not be deleted. Try again.", okText: "OK", alert: true });
+    }
+  });
+
+  /* ---------- Nhập câu từ file CSV ---------- */
+  // Đọc CSV chuẩn: hỗ trợ ô có dấu phẩy trong ngoặc kép, "" là một dấu ", xuống dòng trong ô
+  function parseCSV(text) {
+    text = text.replace(/^\uFEFF/, "");
+    const firstLine = text.split(/\r?\n/, 1)[0];
+    const sep = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ";" : ",";
+    const rows = [];
+    let row = [], cell = "", inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+        else if (ch === '"') inQuotes = false;
+        else cell += ch;
+      } else if (ch === '"') inQuotes = true;
+      else if (ch === sep) { row.push(cell); cell = ""; }
+      else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        row.push(cell); rows.push(row); row = []; cell = "";
+      } else cell += ch;
+    }
+    if (cell || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+
+  const HEADER_WORDS = ["sentence", "term", "english", "word", "câu", "tiếng anh"];
+
+  $("csv-file").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    e.target.value = ""; // cho phép chọn lại cùng một file
+    if (!file || !currentBook) return;
+    const msg = $("csv-msg");
+    msg.classList.remove("error");
+    let rows;
+    try { rows = parseCSV(await file.text()); }
+    catch { msg.textContent = "Could not read this file."; msg.classList.add("error"); return; }
+
+    if (rows.length && HEADER_WORDS.includes((rows[0][0] || "").trim().toLowerCase())) rows.shift();
+
+    const existing = new Set(items.filter(x => x.notebookId === currentBook).map(x => x.term.toLowerCase()));
+    const added = [];
+    let dup = 0, bad = 0;
+    for (const r of rows) {
+      const term = (r[0] || "").trim(), meaning = (r[1] || "").trim();
+      if (!term && !meaning) continue; // dòng trống
+      if (!term || !meaning) { bad++; continue; }
+      if (existing.has(term.toLowerCase())) { dup++; continue; }
+      existing.add(term.toLowerCase());
+      added.push({ id: uid(), term, meaning, notebookId: currentBook, createdAt: Date.now() });
+    }
+
+    const notes = [];
+    if (dup) notes.push(`${dup} already in the notebook`);
+    if (bad) notes.push(`${bad} missing a sentence or meaning`);
+    const skipped = notes.length ? ` Skipped: ${notes.join(", ")}.` : "";
+    if (!added.length) {
+      msg.textContent = `No new sentences found in “${file.name}”.${skipped}`;
+      msg.classList.add("error");
+      return;
+    }
+    items.push(...added);
+    try {
+      await persist();
+      msg.textContent = `Added ${added.length} ${added.length === 1 ? "sentence" : "sentences"} from “${file.name}”.${skipped}`;
+      renderBook();
+    } catch {
+      const ids = new Set(added.map(x => x.id));
+      items = items.filter(x => !ids.has(x.id));
+      msg.textContent = "Could not save the imported sentences. Try again.";
+      msg.classList.add("error");
+    }
+  });
+
+  function showMsg(text, isError = false) {
+    $("form-msg").textContent = text;
+    $("form-msg").classList.toggle("error", isError);
+  }
+  function resetForm() {
+    $("form").reset(); editingId = null;
+    $("save-btn").textContent = "Save sentence"; $("cancel-btn").hidden = true;
+  }
+
+  $("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const term = $("f-sentence").value.trim();
+    const meaning = $("f-meaning").value.trim();
+    if (!term || !meaning) { showMsg("Enter both a sentence and its meaning.", true); return; }
+    let createdItem = null;
+    let oldTerm = null;
+    let oldMeaning = null;
+    if (editingId) {
+      const it = items.find(x => x.id === editingId);
+      if (!it) return;
+      oldTerm = it.term;
+      oldMeaning = it.meaning;
+      it.term = term; it.meaning = meaning;
+      openId = it.id; showMsg("Sentence updated.");
+    } else {
+      if (items.some(x => x.notebookId === currentBook && x.term.toLowerCase() === term.toLowerCase())) {
+        showMsg("This sentence is already in the notebook.", true); return;
+      }
+      createdItem = { id: uid(), term, meaning, notebookId: currentBook, createdAt: Date.now() };
+      items.push(createdItem);
+      showMsg("Sentence saved.");
+    }
+    try {
+      await persist();
+      resetForm(); renderBook(); $("f-sentence").focus();
+    } catch {
+      if (editingId) {
+        const it = items.find(x => x.id === editingId);
+        if (it) {
+          it.term = oldTerm;
+          it.meaning = oldMeaning;
+        }
+      } else if (createdItem) {
+        items = items.filter(x => x.id !== createdItem.id);
+      }
+      showMsg("Could not save the sentence.", true);
+    }
+  });
+  $("cancel-btn").addEventListener("click", () => { resetForm(); showMsg(""); });
+
+  function renderBook() {
+    const b = books.find(x => x.id === currentBook);
+    if (!b) { closeBook(); return; }
+    $("book-title").innerHTML = `<span class="hl" style="background:linear-gradient(transparent 55%, ${esc(b.color)} 55%)">${esc(b.name)}</span>`;
+    document.title = b.name + " · My English Notebooks";
+
+    const mine = items.filter(it => it.notebookId === b.id);
+    const q = $("search").value.trim().toLowerCase();
+    const shown = mine
+      .filter(it => !q || it.term.toLowerCase().includes(q) || it.meaning.toLowerCase().includes(q))
+      .sort((a, c) => a.term.localeCompare(c.term, "en", { sensitivity: "base" }));
+    $("count").textContent = mine.length ? `${mine.length} ${mine.length === 1 ? "sentence" : "sentences"}` : "";
+
+    if (!mine.length) { $("list").innerHTML = `<p class="empty">This notebook is empty. Add your first sentence above.</p>`; return; }
+    if (!shown.length) { $("list").innerHTML = `<p class="empty">No sentences match. Try a different search.</p>`; return; }
+
+    $("list").innerHTML = `
+      <ul class="items">
+        ${shown.map(it => {
+          const open = it.id === openId;
+          return `
+          <li class="item${open ? " open" : ""}" data-id="${it.id}">
+            <button class="sentence" aria-expanded="${open}">${esc(it.term)}</button>
+            <div class="detail" ${open ? "" : "hidden"}>
+              <p class="meaning">${esc(it.meaning)}</p>
+              <div class="row">
+                <button class="icon-btn" data-act="speak">Listen</button>
+                <button class="icon-btn" data-act="edit">Edit</button>
+                <button class="icon-btn danger" data-act="delete">Delete</button>
+              </div>
+            </div>
+          </li>`;
+        }).join("")}
+      </ul>`;
+  }
+
+  $("list").addEventListener("click", (e) => {
+    const li = e.target.closest(".item"); if (!li) return;
+    const it = items.find(x => x.id === li.dataset.id); if (!it) return;
+    if (e.target.closest("button.sentence")) { openId = openId === it.id ? null : it.id; renderBook(); return; }
+    const act = e.target.closest("button[data-act]")?.dataset.act;
+    if (act === "speak") speak(it.term);
+    if (act === "edit") {
+      editingId = it.id;
+      $("f-sentence").value = it.term; $("f-meaning").value = it.meaning;
+      $("save-btn").textContent = "Save changes"; $("cancel-btn").hidden = false; showMsg("");
+      $("form").scrollIntoView({ behavior: "smooth", block: "start" });
+      $("f-sentence").focus({ preventScroll: true });
+    }
+    if (act === "delete") deleteSentence(it);
+  });
+  $("search").addEventListener("input", renderBook);
+
+  async function deleteSentence(it) {
+    const ok = await showModal({
+      title: "Delete this sentence?",
+      html: `This will remove it from the notebook.<span class="quote">${esc(it.term)}</span>`,
+      okText: "Delete",
+    });
+    if (!ok) return;
+    items = items.filter(x => x.id !== it.id);
+    try {
+      await persist();
+      if (editingId === it.id) resetForm();
+      if (openId === it.id) openId = null;
+    } catch {
+      items.push(it);
+      await showModal({ title: "Could not delete", html: "The sentence could not be deleted. Try again.", okText: "OK", alert: true });
+    }
+    renderBook();
+  }
+
+  /* ---------- Học ---------- */
+  // Nhạc khi trả lời đúng: 3 nốt đi lên (Đô - Mi - Sol), tạo bằng Web Audio, không cần file mp3
+  let audioCtx = null, sayTimer = null;
+  function playCorrect() {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      const t0 = audioCtx.currentTime;
+      [523.25, 659.25, 783.99].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = freq;
+        const t = t0 + i * 0.11;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + (i === 2 ? 0.5 : 0.18));
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t);
+        osc.stop(t + 0.55);
+      });
+    } catch {}
+  }
+
+  let learnMode = "meaning"; // "meaning": xem nghĩa rồi gõ câu; "listen": nghe rồi gõ câu
+  let queue = [], qIndex = 0, total = 0, done = 0, score = 0, mistakes = [], answered = false;
+
+  // So sánh không phân biệt hoa thường, dấu câu và khoảng trắng thừa
+  // Ký tự đặc biệt (dấu câu, ', -, ...) không bắt lỗi: bỏ đi rồi mới so sánh.
+  // sep = "" : "don't" -> "dont";  sep = " " : "well-known" -> "well known"
+  const normalize = (s, sep = "") => String(s).toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, sep)
+    .replace(/\s+/g, " ").trim();
+  const isCorrect = (ans, term) =>
+    normalize(ans) === normalize(term) || normalize(ans, " ") === normalize(term, " ");
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function startLearn(list, mode = learnMode) {
+    const b = books.find(x => x.id === currentBook); if (!b) return;
+    if (!list.length) { alert("This notebook has no sentences to learn yet."); return; }
+    learnMode = mode;
+    const listen = mode === "listen";
+    $("learn-intro").textContent = listen
+      ? "Listen to the sentence, then type what you hear."
+      : "Read the meaning, then type the English sentence.";
+    $("learn-label").textContent = listen ? "Listen" : "Meaning";
+    $("learn-prompt").hidden = listen;
+    $("learn-audio").hidden = !listen;
+    queue = shuffle(list); qIndex = 0; total = list.length; done = 0; score = 0; mistakes = [];
+    $("learn-title").innerHTML = `<span class="hl" style="background:linear-gradient(transparent 55%, ${esc(b.color)} 55%)">${listen ? "Listen" : "Learn"}: ${esc(b.name)}</span>`;
+    $("view-book").hidden = true; $("view-learn").hidden = false;
+    $("learn-card").hidden = false; $("learn-done").hidden = true;
+    showQuestion();
+    window.scrollTo(0, 0);
+  }
+
+  // Gợi ý: mỗi chữ cái là *, gõ đúng từ đầu từ đến đâu thì hiện chữ đến đó
+  const isLetter = (ch) => /[\p{L}\p{N}]/u.test(ch);
+  const sameChar = (a, b) => a != null && a.toLowerCase() === b.toLowerCase();
+
+  // Ẩn/hiện gợi ý, nhớ lựa chọn trên trình duyệt này
+  let hintOn = true;
+  try { hintOn = localStorage.getItem("hintOn") !== "0"; } catch {}
+  function applyHint() {
+    $("learn-mask").hidden = !hintOn;
+    $("learn-hint-text").hidden = !hintOn;
+    $("learn-mask-count").hidden = !hintOn;
+    $("learn-hint-toggle").textContent = hintOn ? "Hide hint" : "Show hint";
+    $("learn-hint-toggle").setAttribute("aria-expanded", hintOn);
+  }
+  $("learn-hint-toggle").addEventListener("click", () => {
+    hintOn = !hintOn;
+    try { localStorage.setItem("hintOn", hintOn ? "1" : "0"); } catch {}
+    applyHint();
+    $("learn-input").focus();
+  });
+  applyHint();
+
+  function renderMask(showAll = false) {
+    const it = queue[qIndex];
+    const words = it.term.trim().split(/\s+/);
+    const typed = $("learn-input").value.trim().split(/\s+/).map(w => Array.from(w).filter(isLetter));
+    $("learn-mask-count").textContent = `${words.length} ${words.length === 1 ? "word" : "words"}`;
+    $("learn-mask").innerHTML = words.map((w, wi) => {
+      let li = 0, ok = true; // gặp chữ sai thì các chữ sau trong từ đó không hiện nữa
+      const chars = Array.from(w).map(ch => {
+        if (!isLetter(ch)) return `<span class="sp">${esc(ch)}</span>`;
+        ok = ok && sameChar(typed[wi]?.[li], ch);
+        const hit = showAll || ok;
+        li++;
+        return hit ? `<span class="hit">${esc(ch)}</span>` : "*";
+      }).join("");
+      return `<span class="w">${chars}</span>`;
+    }).join("");
+  }
+  $("learn-input").addEventListener("input", () => { if (!answered) renderMask(); });
+
+  function updateStatus() {
+    $("learn-progress").textContent = `Learned ${done} / ${total}`;
+    $("learn-score").textContent = `First try: ${score}`;
+  }
+
+  function showQuestion() {
+    clearTimeout(sayTimer);
+    const it = queue[qIndex];
+    answered = false;
+    updateStatus();
+    $("learn-again-tag").hidden = !mistakes.includes(it);
+    $("learn-prompt").textContent = it.meaning;
+    $("learn-input").value = ""; $("learn-input").disabled = false;
+    $("learn-check").hidden = false; $("learn-skip").hidden = false; $("learn-next").hidden = true;
+    $("learn-feedback").hidden = true;
+    renderMask();
+    $("learn-input").focus();
+    if (learnMode === "listen") speak(it.term);
+  }
+
+  function reveal(correct) {
+    const it = queue[qIndex];
+    answered = true;
+    if (correct) {
+      playCorrect();
+      // Nhạc xong thì đọc câu
+      sayTimer = setTimeout(() => { if (!$("view-learn").hidden) speak(it.term); }, 650);
+      done++;
+      if (!mistakes.includes(it)) score++;
+    } else {
+      if (!mistakes.includes(it)) mistakes.push(it);
+      queue.push(it); // Sai thì câu này quay lại sau, đến khi làm đúng
+    }
+    updateStatus();
+    renderMask(true);
+    const fb = $("learn-feedback");
+    fb.className = "feedback " + (correct ? "ok" : "bad");
+    fb.innerHTML = correct
+      ? `<div>✓ Correct!</div><div class="answer">${esc(it.term)}</div>`
+      : `<div>✗ The answer is:</div><div class="answer">${esc(it.term)}</div><div class="hint">This sentence will come back later until you get it right.</div>`;
+    if (learnMode === "listen") fb.insertAdjacentHTML("beforeend", `<div class="hint">${esc(it.meaning)}</div>`);
+    fb.insertAdjacentHTML("beforeend", `<div class="row"><button type="button" class="icon-btn" id="learn-listen">Listen</button></div>`);
+    $("learn-listen").addEventListener("click", () => speak(it.term));
+    fb.hidden = false;
+    $("learn-input").disabled = true;
+    $("learn-check").hidden = true; $("learn-skip").hidden = true; $("learn-next").hidden = false;
+    $("learn-next").textContent = qIndex + 1 < queue.length ? "Next ›" : "See result";
+    $("learn-next").focus();
+  }
+
+  $("learn-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (answered) { nextQuestion(); return; }
+    const ans = $("learn-input").value;
+    if (!ans.trim()) { $("learn-input").focus(); return; }
+    reveal(isCorrect(ans, queue[qIndex].term));
+  });
+  $("learn-skip").addEventListener("click", () => { if (!answered) reveal(false); });
+
+  function nextQuestion() {
+    qIndex++;
+    if (qIndex < queue.length) { showQuestion(); return; }
+    $("learn-card").hidden = true; $("learn-done").hidden = false;
+    $("learn-result").textContent = mistakes.length
+      ? `Done! You learned all ${total} sentences. ${score} of ${total} were right on the first try.`
+      : `Perfect! All ${total} sentences were right on the first try.`;
+    $("learn-retry").hidden = !mistakes.length;
+  }
+  $("learn-next").addEventListener("click", nextQuestion);
+
+  $("learn-book").addEventListener("click", () => startLearn(items.filter(it => it.notebookId === currentBook), "meaning"));
+  $("listen-book").addEventListener("click", () => startLearn(items.filter(it => it.notebookId === currentBook), "listen"));
+  $("learn-play").addEventListener("click", () => { speak(queue[qIndex].term); $("learn-input").focus(); });
+  $("learn-play-slow").addEventListener("click", () => { speak(queue[qIndex].term, 0.6); $("learn-input").focus(); });
+  $("learn-again").addEventListener("click", () => startLearn(items.filter(it => it.notebookId === currentBook)));
+  $("learn-retry").addEventListener("click", () => startLearn(mistakes));
+  $("learn-back").addEventListener("click", () => {
+    if (synth) synth.cancel();
+    $("view-learn").hidden = true; $("view-book").hidden = false;
+    renderBook();
+    window.scrollTo(0, 0);
+  });
+
+  function renderAll() { currentBook ? renderBook() : renderShelf(); }
+
+  await loadData();
+  const changed = migrate();
+  if (changed.length) await saveData();
+  if (currentBook && !books.some(b => b.id === currentBook)) currentBook = null;
+  renderAll();
+})();
+</script>
+</body>
+</html>
